@@ -88,11 +88,8 @@ async def bestshop(request):
     cursor = await db.execute("select productname, sum(price) from products group by productname order by sum(price) desc limit 3;")
     rows = await cursor.fetchall()
     print(rows)
-    #jsonString = json.dumps(rows)
-    #await db.commit()
     await cursor.close()
     await db.close()
-    #return web.json_response({'ok': True})
     return web.json_response({'code': 1, 'data':rows})
 
 
