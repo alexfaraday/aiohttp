@@ -31,7 +31,7 @@ cur.execute("""CREATE TABLE IF NOT EXISTS orders (
 """)
 
 print('http://localhost:8080/allshops')
-conn.commit()
+#conn.commit()
 
 
 async def handle(request):
