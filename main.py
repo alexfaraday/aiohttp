@@ -1,35 +1,29 @@
 from aiohttp import web
 import sqlite3
-from sqlite3 import connect
-import pandas as pd
-import json
-from sqlalchemy import insert
 import aiosqlite
 import random
-import requests
-import datetime
-
 from datetime import date
 from dateutil.relativedelta import relativedelta
+
+
+
+#создаем и наполняем БД при первом запуске
 conn = sqlite3.connect('firstdz.db')
 cur = conn.cursor()
 
-
-
-
-
-cur.execute("""CREATE TABLE IF NOT EXISTS shops (
+#создаем таблицу с магазинами
+cur.execute("""CREATE TABLE IF NOT EXISTS shops (  
    shopid INTEGER PRIMARY KEY AUTOINCREMENT,
    shopname TEXT,
    shopadress TEXT);
 """)
-
+#создаем таблицу с продуктами
 cur.execute("""CREATE TABLE IF NOT EXISTS products (
    productid INTEGER PRIMARY KEY AUTOINCREMENT,
    price INT,
    productname TEXT);
 """)
-
+#создаем таблицу с заказами
 cur.execute("""CREATE TABLE IF NOT EXISTS orders (
    orderid INTEGER PRIMARY KEY AUTOINCREMENT,
    storeid INT REFERENCES shops(shopid),
@@ -38,12 +32,14 @@ cur.execute("""CREATE TABLE IF NOT EXISTS orders (
    date DATE);
 """)
 
+#проверяем наполненность базы
 db = sqlite3.connect('firstdz.db')
 cursor =db.execute("SELECT * FROM shops ")
 rows = cursor.fetchall()
 
 if rows:
     print('БД наполнена можно работать')
+#если база не наполнена, начинаем ее наполнять
 else:
     print('Необходимо наполнить БД, пожалуйста, подождите')
     SQLSHOPS="""INSERT INTO `shops` ( `shopname`,`shopadress`) VALUES
@@ -87,7 +83,7 @@ VALUES
     cursor = db.execute(SQLSHOPS)
     cursor = db.execute(SQLPRODUCTS)
     db.commit()
-    for i in range(1, 100):
+    for i in range(1, 500):
         randshop = random.randint(1, 15)
         randproduct = random.randint(1, 18)
         randomdate=date.today()+ relativedelta(days=-(random.randint(1, 40)))
@@ -105,6 +101,7 @@ VALUES
 
     cursor.close()
     db.close()
+#завершили наполнение базы
     print('БД наполнена можно работать')
     print('Получить все товарные позиции:http://localhost:8080/allproducts')
     print('Получить все магазины:http://localhost:8080/allshops')
@@ -127,68 +124,47 @@ async def handle(request):
     conn.close()
     return web.Response(text=text)
 
-
+#функция получения всех магазинов
 async def allshops(request):
-
     db = await aiosqlite.connect('firstdz.db')
     cursor = await db.execute("SELECT * FROM shops ")
     rows = await cursor.fetchall()
-    print(rows)
-    #jsonString = json.dumps(rows)
-    #await db.commit()
     await cursor.close()
     await db.close()
-    #return web.json_response({'ok': True})
-    return web.json_response({'code': 1, 'data':rows})
+    return web.json_response({'code': 200, 'shops':rows})
 
-
+#функция получения всех продуктов
 async def allproducts(request):
-
     db = await aiosqlite.connect('firstdz.db')
     cursor = await db.execute("SELECT * FROM products ")
     rows = await cursor.fetchall()
-    print(rows)
-    #jsonString = json.dumps(rows)
-    #await db.commit()
     await cursor.close()
     await db.close()
-    #return web.json_response({'ok': True})
-    return web.json_response({'code': 1, 'data':rows})
+    return web.json_response({'code': 200, 'products':rows})
 
-
+#функция получения 10 самых продаваемых товаров
 async def bestsales(request):
-
     db = await aiosqlite.connect('firstdz.db')
     cursor = await db.execute("select saleproductid,productname, count(saleproductid) from orders INNER JOIN products ON saleproductid=productid  group by saleproductid order by count(saleproductid) desc limit 10;")
     rows = await cursor.fetchall()
-    print(rows)
-    #jsonString = json.dumps(rows)
-    #await db.commit()
     await cursor.close()
     await db.close()
-    #return web.json_response({'ok': True})
-    return web.json_response({'code': 1, 'data':rows})
+    return web.json_response({'code': 200, 'data':rows})
 
+#функция получения 10 самых доходных магазинов
 async def bestshop(request):
     one_month = date.today() + relativedelta(months=-1)
-    today = date.today()+ relativedelta(days=+1)
-    #today=today.strftime("%Y-%m-%d")
-    print(today)
-    print(one_month)
-
-
+    today = date.today()
     db = await aiosqlite.connect('firstdz.db')
     SQL="select saleproductid, sum(totalsum) AS totalsales, shopadress from orders INNER JOIN shops ON storeid=shopid  WHERE date >='"+str(one_month)+"' AND date <='"+str(today)+"'  group by saleproductid order by sum(totalsum) desc limit 10"
-    print(SQL)
     cursor = await db.execute(SQL)
     rows = await cursor.fetchall()
-    print(rows)
     await cursor.close()
     await db.close()
     return web.json_response({'code': 200, 'data':rows})
 
 
-
+#функция обработки продажи
 async def sendorder(request):
     if request.method == "POST":
         data = await request.json()
@@ -197,39 +173,9 @@ async def sendorder(request):
         await db.commit()
         await cursor.close()
         await db.close()
-        return web.json_response({'ok': True})
-
-async def makeorders(request):
-    randshop=random.randint (1,5)
-    randproduct=random.randint (1,6)
-
-    #url = "http://localhost:8080/sendorder"
+        return web.json_response({'code': 200, 'message':'success insert'})
 
 
-    db = await aiosqlite.connect('firstdz.db')
-    SQL="SELECT * FROM products WHERE productid="+str(randproduct)
-
-    print(SQL)
-    cursor = await db.execute(SQL)
-    rows = await cursor.fetchall()
-    cursor = await db.execute("INSERT INTO orders ('storeid','totalsum','saleproductid', 'date') VALUES(" + str(randshop) + "," + str(rows[0][1]) + ",'" + str(randproduct) + "', date('now'))")
-    await db.commit()
-    await cursor.close()
-    await db.close()
-
-
-
-
-    #msg = "Твой текст!"
-    #data = {"shopid": randshop,"productid": randproduct,"sum": rows[0][1]}
-    #print(data)
-    #response = await requests.post(url, data={"shopid": randshop,"productid": randproduct,"sum": rows[0][1]})
-    return web.json_response({'ok': True})
-
-    #response = requests.post(url, data=json.dumps(data)).json()
-
-    #answer = response.get("replies")
-    #print(*answer)
 
 
 
@@ -238,7 +184,6 @@ app.add_routes([web.get('/', handle),
                 web.get('/allshops', allshops),
                 web.post('/sendorder', sendorder),
                 web.get('/allproducts', allproducts),
-                web.get('/makeorders', makeorders),
                 web.get('/bestsales', bestsales),
                 web.get('/bestshop', bestshop)])
 
