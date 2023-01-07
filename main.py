@@ -2,7 +2,7 @@ from aiohttp import web
 import sqlite3
 import aiosqlite
 import random
-from datetime import date
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
 
@@ -131,6 +131,9 @@ async def allshops(request):
     db = await aiosqlite.connect('firstdz.db')
     cursor = await db.execute("SELECT * FROM shops ")
     rows = await cursor.fetchall()
+
+    #print (json.dumps(rows, default=json_serial))
+
     await cursor.close()
     await db.close()
     return web.json_response({'code': 200, 'shops':rows})
