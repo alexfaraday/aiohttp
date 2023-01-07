@@ -36,9 +36,15 @@ cur.execute("""CREATE TABLE IF NOT EXISTS orders (
 db = sqlite3.connect('firstdz.db')
 cursor =db.execute("SELECT * FROM shops ")
 rows = cursor.fetchall()
-
+#если база наполнена приступаем к работе
 if rows:
-    print('БД наполнена можно работать')
+    print('БД наполнена можно работать\n')
+    print('Прочитать readme:http://localhost:8080/\n')
+    print('Получить все товарные позиции:http://localhost:8080/allproducts')
+    print('Получить все магазины:http://localhost:8080/allshops')
+    print('Получить топ 10 самых доходных магазинов за месяц:http://localhost:8080/bestshop')
+    print('Получить топ 10  самых продаваемых товаров:http://localhost:8080/bestsales\n\n')
+
 #если база не наполнена, начинаем ее наполнять
 else:
     print('Необходимо наполнить БД, пожалуйста, подождите')
@@ -83,31 +89,27 @@ VALUES
     cursor = db.execute(SQLSHOPS)
     cursor = db.execute(SQLPRODUCTS)
     db.commit()
+    #наполняем БД случайными транзакциями
     for i in range(1, 500):
         randshop = random.randint(1, 15)
         randproduct = random.randint(1, 18)
         randomdate=date.today()+ relativedelta(days=-(random.randint(1, 40)))
         SQL = "SELECT * FROM products WHERE productid=" + str(randproduct)
-
-
         cursor = db.execute(SQL)
         rows =cursor.fetchall()
         SQLORDER="INSERT INTO orders ('storeid','totalsum','saleproductid', 'date') VALUES(" + str(randshop) + "," + str(rows[0][1]) + ",'" + str(randproduct) + "','"+ str(randomdate)+"')"
         db.commit()
         cursor = db.execute(SQLORDER)
-
-
-
-
     cursor.close()
     db.close()
 #завершили наполнение базы
-    print('БД наполнена можно работать')
+    print('БД наполнена можно работать\n')
+    print('Прочитать readme:http://localhost:8080/\n')
     print('Получить все товарные позиции:http://localhost:8080/allproducts')
     print('Получить все магазины:http://localhost:8080/allshops')
     print('Получить топ 10 самых доходных магазинов за месяц:http://localhost:8080/bestshop')
     print('Получить топ 10  самых продаваемых товаров:http://localhost:8080/bestsales')
-    print('Прочитать readme')
+    print('Прочитать readme:http://localhost:8080/')
 
 
 
@@ -118,9 +120,9 @@ VALUES
 
 
 
-async def handle(request):
-    name = request.match_info.get('name', "Anonymous")
-    text = "Hello, " + name
+async def readme(request):
+
+    text = "1.Для того чтобы создать заказ необходимо отправить POST запрос на адрес: \n  http://localhost:8080/sendorder \n \n {'storeid': '5','saleproductid': '17','totalsum': '350'} \n\n в ответ вернется подтверждение записи \n \n{'code': 200,'message': 'success insert'}\n\n 2.Получить все товарные позиции:http://localhost:8080/allproducts \n\n 3.Получить все магазины:http://localhost:8080/allshops \n\n 4.Получить топ 10 самых доходных магазинов за месяц:http://localhost:8080/bestshop \n\n 5.Получить топ 10  самых продаваемых товаров:http://localhost:8080/bestsales \n\n"
     conn.close()
     return web.Response(text=text)
 
@@ -151,7 +153,7 @@ async def bestsales(request):
     await db.close()
     return web.json_response({'code': 200, 'data':rows})
 
-#функция получения 10 самых доходных магазинов
+#функция получения 10 самых доходных магазинов за 30 дней
 async def bestshop(request):
     one_month = date.today() + relativedelta(months=-1)
     today = date.today()
@@ -180,7 +182,7 @@ async def sendorder(request):
 
 
 app = web.Application()
-app.add_routes([web.get('/', handle),
+app.add_routes([web.get('/', readme),
                 web.get('/allshops', allshops),
                 web.post('/sendorder', sendorder),
                 web.get('/allproducts', allproducts),
