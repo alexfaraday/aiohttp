@@ -131,9 +131,6 @@ async def allshops(request):
     db = await aiosqlite.connect('firstdz.db')
     cursor = await db.execute("SELECT * FROM shops ")
     rows = await cursor.fetchall()
-
-    #print (json.dumps(rows, default=json_serial))
-
     await cursor.close()
     await db.close()
     return web.json_response({'code': 200, 'shops':rows})
